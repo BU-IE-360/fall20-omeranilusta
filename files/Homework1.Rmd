@@ -1,0 +1,179 @@
+---
+title: "Homework-1"
+author: "Ömer Anıl Usta"
+date: "06 11 2020"
+output: html_document
+---
+
+## Homework1
+
+
+### 1)Daily Births and the Search for Baby  Names
+
+####    We have a data of the daily births in US from 2000 to 2014. 
+####    Lets check daily birth frequencies in the months of the year 2014, and see if there are any differences.
+
+```{r years, echo=FALSE, include=TRUE}
+knitr::opts_chunk$set(cache = TRUE)
+birthdf <- as.data.frame(read.csv(file="https://raw.githubusercontent.com/omeranilusta/data/master/births/US_births_2000-2014_SSA.csv", header=TRUE, sep=","))
+hist(birthdf[5108:5138,5],main="January",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5139:5169,5],main="February",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5170:5200,5],main="March",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5201:5231,5],main="April",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5232:5262,5],main="May",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5263:5293,5],main="June",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5294:5324,5],main="July",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5325:5355,5],main="August",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5356:5386,5],main="September",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5387:5417,5],main="October",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5418:5448,5],main="November",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+hist(birthdf[5449:5479,5],main="December",
+xlab="# of Births in a Day",xlim=c(6000,15000),
+border = "rosybrown", col="rosybrown1")
+```
+
+####    After looking at these histograms, we can say some months have more births than others. 
+####    Now lets look at the year 2014 as a whole. In the boxplot graph below: July, August and September has the most births compared to other months. 
+
+
+```{r birth, echo=FALSE, include=TRUE}
+birthdf <- as.data.frame(read.csv(file="https://raw.githubusercontent.com/omeranilusta/data/master/births/US_births_2000-2014_SSA.csv", header=TRUE, sep=","))
+boxplot(birthdf[5115:5479,5]~birthdf[5115:5479,2],
+main="Amount of births each month",ylim =c(6000,14000), xlab="Month", ylab="Number of Births in a day", col="rosybrown1", border="rosybrown")
+USbirths <- as.data.frame(read.delim2("~/us.txt" , header = FALSE, sep = "-"))
+boxplot(USbirths[,4]~USbirths[,2],ylim = c(70, 100),
+        main="Google search popularity of 'baby names' ", 
+        xlab="Month", 
+        ylab="Search popularity", 
+        col="rosybrown1", border="rosybrown")
+```
+  
+####    If we look a the boxplot raph in popularity of "baby names" in Google, we observe leading up to the boom of births in July, August and September; for July  many people were looking for a name for their future baby. Interesting thing is popularity of baby names near Christmas and the New Year.
+
+### 2)Average Temperature and the Searchor for Sunscreen
+    
+####    Next we have a data about the weather temperatures in United States from July of 2014 to June of 2015. 
+####    Now lets look at the frequency histograms of temperatures of weather in Fahrenheit for the months in this period of time. We will focus on the actual mean temperature.
+
+```{r weather, echo=FALSE, include=TRUE}
+weatherdf <- as.data.frame(read.delim2(file="https://raw.githubusercontent.com/BU-IE-360/fall20-omeranilusta/gh-pages/Yeni%20Metin%20Belgesi.txt", header=TRUE, sep=","))
+hist(weatherdf[184:213,2],main="January 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[214:243,2],main="February 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[244:273,2],main="March 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[274:304,2],main="April 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[305:334,2],main="May 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[335:365,2],main="June 2015",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[1:31,2],main="July 2014", xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[32:61,2],main="August 2014",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[62:92,2],main="September 2014",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[93:122,2],main="October 2014",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[123:153,2],main="November 2014",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+hist(weatherdf[154:183,2],main="December 2014",xlim = c(10,85),
+xlab="Temperature in Fahrenheit",
+border = "peru", col="sandybrown")
+
+```
+
+####    Now lets see the months next to each other and compare. As expected summer months have higher temperature while the beginning and the end of the year is colder.
+
+```{r google, echo=FALSE, include=TRUE}
+weatherdf <- as.data.frame(read.delim2(file="https://raw.githubusercontent.com/BU-IE-360/fall20-omeranilusta/gh-pages/Yeni%20Metin%20Belgesi.txt", header=TRUE, sep=","))
+boxplot(weatherdf[,2]~weatherdf[,1],
+main="Daily Average Temperatures for Months",ylim =c(10,85), xlab="Month", ylab="Temperature (Fahrenheit)", col="sandybrown", border="peru")
+UStemp <- as.data.frame(read.delim2("~/sunscreen.txt" , header = FALSE, sep = "-"))
+boxplot(UStemp[,4]~UStemp[,2],ylim = c(0, 100),
+        main="Google search popularity of 'sunscreen' ", 
+        xlab="Month", 
+        ylab="Search popularity", 
+        col="sandybrown", border="peru")
+```
+
+####    We observe the search for "sunscreen" increases drastically when the temperatures start rising.
+
+### 3)Emergency Calls About Hurricane Sandy and the Search for Shelter
+
+####    On October 22nd 2012, Hurricane Sandy hit New York and cost $65 billion dollars worth of destruction. The state of had prepared a phone number for emergencies. Lets see week by week the calls that was made to this number 3-1-1.
+    
+```{r, echo=FALSE, include=TRUE}
+sandydf <- as.data.frame(read.delim2(file="https://raw.githubusercontent.com/BU-IE-360/fall20-omeranilusta/gh-pages/sandy.txt", header=TRUE, sep=","))
+hist(sandydf[1:7,25],main="1st Week of Hurricane Sally", xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[8:14,25],main="2nd Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[15:21,25],main="3rd Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[22:28,25],main="4th Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[29:35,25],main="5th Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[36:42,25],main="6th Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[43:49,25],main="7th Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+hist(sandydf[50:56,25],main="8th Week of Hurricane Sally",xlim = c(0,10000),
+xlab="Daily Number of Calls to 311",
+border = "darkslateblue", col="cornflowerblue")
+```
+
+####    We can observe that the hurricane was very powerful starting from first week and really terrorising in second week. It gained momentum with the fourth week and then settled again. Lets see compare these observations to Google Search Popularity for "Shelter".
+
+```{r, echo=FALSE, include=TRUE}
+sandydf <- as.data.frame(read.delim2(file="https://raw.githubusercontent.com/BU-IE-360/fall20-omeranilusta/gh-pages/sandy.txt", header=TRUE, sep=","))
+boxplot(total~date,data = sandydf,
+main="Daily Average Temperatures for Months", xlab="Week", ylab="Number of Calls", border = "darkslateblue", col="cornflowerblue")
+shelterdf <- as.data.frame(read.delim2(file="https://raw.githubusercontent.com/BU-IE-360/fall20-omeranilusta/gh-pages/shelter.txt", header=TRUE, sep=","))
+boxplot(shelterdf[,2]~shelterdf[,1],main="Google Search Popularity of 'Shelter'", xlab="Week", ylab="Google Search for Shelter", border = "darkslateblue", col="cornflowerblue")
+```
+
+####    We see that the look for shelter skyrocketed when the hurricane started heating up. 
