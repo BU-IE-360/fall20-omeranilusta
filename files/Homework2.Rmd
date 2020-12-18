@@ -1,0 +1,199 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+# A Data Analysis Study On Consumer Price Index In Turkey And Correlated Factors
+
+Ömer Anıl Usta - IE360 - Fall20 - HW2
+14/12/2020
+
+## Introduction
+
+Consumer Price index is an important indicator of economy to the general public. In a developing country like Turkey, even the smallest issues may cause the prices to rise immediately. Over the last couple of years, and especially this year with Covid-19 causing shutdowns and lockdowns, we experienced steep increases of prices in the market in Turkey. The high positive change in prices determine the inflation rate. Inflation rate does not include anything other than the change of prices in the market so even if the inflation rate is very high, we cannot say anything about the purchasing power of the people. However, in Turkey annual interest rate for salaries or other income does not get close to inflation. Change in prices heavily effect people in Turkey and their purchasing power. Consumer Price index is deeply connected to different factors. In this study we will explore the correlation of _Consumer Price Index_ to _Industrial Production Index, Employment and Exchange Rates._
+
+* Prices in the market are related to production rate of the country. High production increases the product in the market and that causes the prices to drop. With this model we can make the assumption that we will discover a _negative correlation between price and production_. We will be looking at Industrial Production Index(IPI) to see changes in production rate through the years. Later we will look for correlation between this measure and our main subject: Consumer Price Index.
+
+* Production relies on employment. If the employment increases then the production will follow. To make an assumption for the correlation between Consumer Price Index and employment we do as we did about Industrial Production Index. The logical assumption would be that _employment and Consumer Price Index are negatively correlated_.
+
+* Turkey is a developing economy therefore it has to operate with other currencies to carry out transactions with foreign markets. These currencies are generally US Dollar and Euro. Being the currencies of giant economies of US and Europe they are more valuable that the modest Turkish Lira. So when we exchange our money for dollar the money amount decreases. Political turmoil generally increases the exchange rates and that is what has been happening in recent years. When our purchases are outsourced, exchange rate determines the money we pay. And Turkey imports many goods. It is safe to assume that _an increase in exchange rate will also increase Consumer Price Index_. In this study we will be analyzing dollar/TL.
+
+Lets look at a part of our data. Price Index is shown as CPI, Industrial Production Index is shown as IPI, employment is shown as Emp and dollar/TL exchange rate is shown as Dollar.  
+
+```{r include=FALSE, echo=FALSE}
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(ggcorrplot)
+library(GGally)
+library(ggpubr)
+production_data <-data.table(read_xlsx("C:/Users/lenovo/Desktop/EVDS.xlsx"))
+setnames(production_data, "Tarih", "Date")
+setnames(production_data, "TP SANAYREV4 Y1", "IPI")
+setnames(production_data, "TP DK USD A YTL", "Dollar")
+setnames(production_data, "TP FG J0", "CPI")
+setnames(production_data, "TP TIG03", "Emp")
+```
+
+```{r}
+production_data$Date<-parse_date_time(production_data[,Date], "Ym")
+production_data[,Date:=as.Date(Date,format='%Y-%m-%d')]
+head(production_data)
+```
+We have monthly observations for our 4 sets of data Consumer Price Index, Industrial Production Index, Employment and Dollar/TL excahnge rate. The data is collected between 2011 and 2019 by the Central Bank of the Republic of Turkey. Employment is in thousands. Because we will be using data until 2019 we won't be analyzing the effects of COVID-19 on the turkish economy. On the following paragraphs we will be analyze and question assumed correlation between the different groups of data in hand.
+
+## Our Main Focus: Consumer Price Index Through The Years
+
+In the graphs below the visualization of Price Index. Let us observe the movements in the Consumer Price Index in previous 9 years. Later we will compare this change to other measures and check for correlation.
+
+```{r echo=FALSE}
+ggplot(production_data, aes(CPI)) + 
+  geom_histogram(colour="darkslateblue", fill="darkslateblue",  bins = 30) + 
+  labs(title = " Yearly Histograms of Consumer Price Indexes 2011-2019", 
+       x = "CPI ",
+       y = " ") +
+  theme_minimal()+theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap(~year(Date), ncol=3)
+```
+From the histograms above we clearly see that Consumer Price Index has increased tremendously. Prices doubled from the year 2011 to 2019. This brings out that prices have risen greatly for the people of Turkey. For further observation now look at the graph below. 
+
+```{r echo=FALSE}
+ggplot(production_data)+geom_line(aes(x=Date, y=CPI), colour="mediumseagreen")+
+  labs(title = "Consumer Price Index 2011-2019", 
+       x = "Time",
+       y = "CPI") + theme_minimal()
+```
+
+The steepness of the graph shows the suddenness of this doubling of the prices. Looking to this graph we can say the economy of Turkey has changed through those years and most definitely been effected by it.
+
+### Industrial Production Index
+
+Now let us focus on our first measure. Industrial Production Index from 2011 to 2019 is visuazed below. Observe the boxplot below and note the change.
+
+```{r echo=FALSE}
+ggplot(production_data) + 
+  geom_boxplot(aes(y=IPI, x=Date, group=year(Date), fill= factor(year(Date)))) + 
+  scale_fill_brewer(palette = "PuBuGn", name = "Years") +
+  labs(title = "Yearly Industrial Production Index", 
+       x = "Year",
+         y = "Industrial Production Index") +
+  theme_minimal()
+```
+
+It is safe to say the production was aslo increased. Nearly 1.5 increase in 9 years has helped for the  growth of Turkey. We should say this increase is not as big as the increase in Consumer Price Index. 
+
+### Employment
+
+Monthly observations for the employment is visualised in yearly boxplots below. Let us plot the change in employment. 
+
+```{r  echo=FALSE}
+ggplot(production_data) + 
+  geom_boxplot(aes(y=Emp, x=Date, group=year(Date), fill= factor(year(Date)))) + 
+  scale_fill_brewer(palette = "BuPu", name = "Years") +
+  labs(title = "Yearly Employment", 
+       x = "Year",
+       y = "Employment") +
+  theme_minimal()
+```
+
+It is seen that employment has increased steadily. With an exception from 2018 to 2019. For the last year employment drops below the point of 2018. Overall this graph points to an increase. We may say Industrial Production growth was effected by the growth in employment. But if we compare the rate of the increase in employment to the previous observations, we must say that increase of CPI and Industrial Production Index were greater. 
+
+### Dollar/TL Exchange Rate
+
+Next, take a look at the dollar/TL exchange rate and observe the boxplot graph below of the visualization. Check the increase which will eventually effect prices therefore effect Consumer Price Index. 
+
+```{r echo=FALSE}
+ggplot(production_data) + 
+  geom_boxplot(aes(y=Dollar, x=Date, group=year(Date), fill= factor(year(Date)))) + 
+  scale_fill_brewer(palette = "GnBu", name = "Years") +
+  labs(title = "Yearly Excahnge Rates for Dollar/Turkish Lira", 
+       x = "Year",
+       y = "Dollar/Turkish Lira") +
+  theme_minimal()
+```
+
+From the graph above we can see an increase that resembles an exponential growth. We can say that US dollar has gained a significant amount of value compared to Turkish Lira. It looks to be close to 4 times growth in those 9 years. This growth in exchange rate most definitely effected the growth in Consumer Price Index. We will further analyze that correlation. 
+
+Lets see all of our data displayed alltogether. Below we see the visualization of 4 different measures. The size rate of the observations is changed to match one another to see a more realistic comparison. Now look at the graph and see any missing information from the previous graphs. 
+
+```{r echo=FALSE}
+ggplot() + 
+  geom_line(data=production_data,aes(y=CPI/3,x= Date,colour="cornflowerblue"),size=1 )+geom_line(data=production_data,aes(y=IPI,x= Date,colour="lightseagreen"),size=1 )+
+  geom_line(data=production_data,aes(y=Emp/250,x= Date,colour="mediumseagreen"),size=1) +
+  geom_line(data=production_data,aes(y=Dollar*25,x= Date,colour="lightslateblue"),size=1) +
+  labs(title = "Other Data Compared to The Consumer Price Index ",
+       x = "Date ", y = " ") +
+  scale_color_discrete(name = "Data", labels = c("CPI","IPI","Emp", "Dollar"))+ theme_minimal()
+```
+
+As we saw earlier all of our measures increased overtime, some increasing more than other. We realize the seasonality in the measures Employment and Industrial Production Index. We also observe that those two measures generally follow each other and follow a fairly similar path. Now based on the data and our comments on the graphs of observations let us calculate the correlations.
+
+## Correlation Of The Measures
+
+To analyze the correlation between different measures, scatter plots are used. Below is a scatter plot graph using our measures and compute the link between one another. 
+
+```{r echo=FALSE}
+ggpairs(production_data[,-1])+theme_minimal()+ labs(title ="Scatter Plots of CPI, IPI, Dollar/TL and Employment")+theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+It is seen that there is a considerable correlation between all of our measures. For example employment and Industrial Production Index seems to be linked. But if we focus on our main measure which is Consumer Price Index; there is a big correlation to dollar/TL excahange rate. In fact those two measures have the biggest correlation estimate. Now let us further analyze for connections between data. 
+
+Another way for visualizing correlation is correlation matrix graph. For simpler observation look at the correlation matrix below and decide on the soundness of the correlations based on the circles sizes and colours.
+
+```{r echo=FALSE}
+corrdata<- round(cor(production_data[,-1]), 100)
+ggcorrplot(corrdata, method = "circle",outline.col = "white",colors = c("mediumseagreen", "coral", "cornflowerblue"))
+```
+
+Again we can see there is a great correlation between CPI and dollar/TL exchange rate. 
+
+Finally let us do correlation tests on one on one between other measures and Consumer Price Index. 
+
+### Correlation Between Consumer Price Index and Industrial Production Index
+
+Our assumption on these two measures was that there would be a negative correlation. But we observed both Consumer Price Index and Industrial Production Index increased over 2011-2019 period. Using Scatter Plot and Correlation Matrix we came up to a not so significant correlation. Now let us do the test and chech if our assumption was right. 
+
+```{r echo=FALSE}
+print(cor.test(production_data$CPI, production_data$IPI))
+```
+
+We can say that with p-value being very small, we can reject null hypothesis. This result tells us there seems to be a significant amount of correlation between CPI and Industrial Production Index. 
+
+### Correlation Between Consumer Price Index and Employment
+
+Our assumption on these two measures was that there would be a negative correlation. But we observed both Consumer Price Index and employment increased over 2011-2019 period, except for one year for employment. Using Scatter Plot and Correlation Matrix we came up to a not so significant correlation. Now let us do the test and chech if our assumption was right. 
+
+```{r echo=FALSE}
+print(cor.test(production_data$CPI, production_data$Emp))
+```
+
+We can say that with p-value being very small, we can reject null hypothesis. This result tells us there seems to be a significant amount of correlation between CPI and Employment. 
+
+### Correlation Between Consumer Price Index and Dollar/TL Exchange Rate
+
+Our assumption on these two measures was that there would be correlation.Then  we observed both Consumer Price Index and dollar/TL excahnge rate increased greatly over 2011-2019 period. Using Scatter Plot and Correlation Matrix we came up to a significant correlation. Now let us do the test and chech if our assumption was right. 
+
+```{r echo=FALSE}
+print(cor.test(production_data$CPI, production_data$Dollar))
+```
+
+We can say that with p-value being very small, we can reject null hypothesis. This result tells us there seems to be a significant amount of correlation between CPI and Employment. 
+
+## Conclusion
+
+In this study we aimed to find correlated factors to Consumer Price Index. We looked into monthly observations from 2011 to 2019 of Industrial Production Index, Employment and USD/TL EXchange Rate. We made assumption for correlations before any analysis. We observed the behaviour of our measures through the years. And then we conducted correlation tests. Here is our final results and comments on this subject:
+
+* Turkey is a developing country. Its currency is easily and heavily effected by any economic and political problem. Mainly US dollar and other foreign currencies are used for transactions therefore change in the value of Turkish Lira has crucial effects on the purchasing power. We observed a great growth in dollar/TL exchange rate. US dollar gained 4 times more value on Turkish Lira in the previous 9 years. We assumed that this exchange rate would be correlated with CPI. If the exchange rate increased so would the Consumer Price Index and they both did. First sign of our assumpsions truth was this observation. After further analysis and tests our assumption could be proven to be right. 
+
+* Our assumption on the correlation between Consumer Price Index and Industrial Production Index was that there would be negative correaltion. We observed their plots and saw both measures increased during observed period. Further observations showed there was a positive correlation. After conducting a correlation test we saw that their link was significant. 
+
+* Remarks made about the correlation of Industrial Production Index and CPI also goes for Employment and CPI. We made the assumption of negative correlation and then came upon a significant positive correlation. 
+
+* Economy and Consumer Price Index is shaped by many different factors. In a developing economy like Turkey one of the key factors may be the exchange rate to a currency with a larger market. And our study supports that. Huge increase in exchange rate to dollar doubled the prices in the market. I believe with a data that is effected by so many factors like economy we need to approach it with perspective. Therefore I personally don't believe that there is a significant _positive_ correlation to other measures in our study. Our assumptions were there would be negative correlations between CPI-IPI and CPI-employment. But we came across the opposite of that. Which is normal considering the tests only look at correlation between only two measures and not the whole variety of measures. I believe the steep increase in exchange rate has made it harder to look at the market like a normal economy. It is also possible that there are other factors or our assumptions were wrong. 
+
+## Appendices
+
+You can find codes for this work [here](https://bu-ie-360.github.io/fall20-omeranilusta/files/Homework2.Rmd)
