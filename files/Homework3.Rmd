@@ -1,0 +1,229 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+# Time Series Regression for Predicting Price Index for Alcoholic Beverages and Tobacco 
+
+Ömer Anıl Usta - IE360 - Fall20 - HW3
+09/01/2020
+
+## 1.Introduction
+
+  Forecasting can be done in many methods. Most common one of these methods is regression models. Regression models uses predictors which are also data that are correlated to the target data. It basically gives a calculation that can easyily be used to estimate and predict the target data. 
+  
+  The data investigated in this study is the __Price Index of Alcoholic Beverages and Tobacco__ in Turkey. Data in hand is monthly  estimates from March 2014 to November 2020. Aim of this study is coming up with a regression model and predict the next month's estimate which is December 2020.
+  
+  At the start this study has many data at hand that may or may not be correlated to the target price index therefore may or may not be used while coming up with a regression model. Different data at hand are of course our target Price Index of Alcoholic Beverages and Tobacco, Consumer Price Index, Euro/Turkish Lira exchange rate, Current Situation of the Economy(Compared to 12 months ago), Current Financial Situation of the Household, Total Revenue from Alcohol Consumption, The amount of money spent in places of drinking alcohol  and The number of transactions made places of drinking alcohol. Unfortunately there weren't any available series about tobacco production/use that had data until November 2020. 
+  
+* Considering the correlation of __CPI__ to the prices of alcohol and tobacco it can be said that there would probably be a positive correlation. When the price of everything in a market increases, this change would eventually effect the prices of alcoholic beverages and tobacco products. 
+* The __exchange rate of Euro__ would effect the alcohol prices as well. Since many alcohol brands are foreign if exchange rate increased, Tl prices of the product would also increase, therefore there is a positive correlation.
+* **Current Economic Situation** and the __Current Financial Situation of the Household__ would effect alcohol and tobacco prices the same way. Since finance of a household would be effected by the economy. It is hard to say how these measures would effect our target  data.
+* **Total Revenue from Alcohol Consumption**, **The amount of money spent in places of drinking alcohol** and **The number of transactions made places of drinking alcohol** would also effect the alcohol and tobacco prices the same way. It is hard to predict how they would correlate to the alcohol prices. If alcohol prices increased the revenue per product would increase but demand would decrease. 
+  
+From the data at hand this study tries to find correlations. Series with correlation are treated like they are predictors for the regression model. Then these predictors are investigated if they really correlate in the model to the target data. Regression model created is tested if it really fit for predicting the target value. And finally, using this regression model the prediction is made.
+  
+```{r, echo=FALSE , include=FALSE}
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(ggcorrplot)
+library(GGally)
+library(Hmisc)
+library(ggpubr)
+library(fpp)
+```
+
+## 2.Manipulation and Visualization
+
+  The data investigated in this study is the Price Index of Alcoholic Beverages and Tobacco in Turkey. Data in hand is monthly  estimates from March 2014 to November 2020. Aim of this study is coming up with a regression model and predict the next month's estimate which is December 2020. Now let's look at the measures in the data table below that will be used to create a regression model for the Price Index of alcohol and tobacco. 
+
+```{r echo=FALSE}
+alcandtobdata <-data.table(read_xlsx("C:/Users/lenovo/Desktop/EVDS.xlsx"))
+setnames(alcandtobdata, "Tarih", "Date")
+setnames(alcandtobdata, "TP DK EUR A YTL", "Euro")
+setnames(alcandtobdata, "TP FG J02", "alcandtob")
+setnames(alcandtobdata, "TP FE OKTG01", "CPI")
+setnames(alcandtobdata, "TP KKHARTUT KT14", "Casino1")
+setnames(alcandtobdata, "TP KKISLADE KA14", "Casino")
+setnames(alcandtobdata, "TP KB GEL024", "Alcohol")
+setnames(alcandtobdata, "TP TG2 Y11", "Household")
+setnames(alcandtobdata, "TP TG2 Y04", "Economy")
+alcandtobdata$Date<-parse_date_time(alcandtobdata[,Date], "Ym")
+alcandtobdata[,Date:=as.Date(Date,format='%Y-%m-%d')]
+head(alcandtobdata)
+```
+
+  For clarification "Casino1" stands for "The amount of money spent in places of drinking alcohol/Thousand Tl", "Casino" stands for "The number of transactions made places of drinking alcohol", "Euro" stands for "Exchange rate of Euro/Tl", "alcandtob" stands for "Price index of alcoholic beverages and tobacco", "CPI" stands for "General consumer price index", "Household" stands for "Current financial situation of the household", "Economy" stands for "Current economic situation(compared to 12 moths ago)", "Alcohol" stands for "Revenues from alcoholic beverages/Thousand Tl". In the following parts data will be referred with these abbreviations. 
+  
+  These data types are canditates to be used in a regression model to predict the price index of alcoholic beverages and tobacco in December 2020. We will analyze the data and pick the ones that is correlated to our core data type.
+
+  Now observe the monthly change in alcohol and tobacco prices over the years from 2014 to 2020.   
+
+```{r echo=FALSE}
+ggplot(alcandtobdata)+geom_line(aes(x=Date, y=alcandtob), colour="mediumseagreen")+
+  labs(title = "CPI of Alcoholic Beverages And Tobacco", 
+       x = "Time",
+       y = "Price Index")
+```
+
+  This grapch seems volatile therefore the logarithm of the data is taken and the new graph is drawn below. 
+
+```{r echo=FALSE}
+ggplot(alcandtobdata)+geom_line(aes(x=Date, y=log(alcandtob)), colour="coral")+
+  labs(title = "Log/CPI of Alcoholic Beverages And Tobacco", 
+       x = "Time",
+       y = "Log/Price Index")
+```
+
+  There isn't enough change in the volatility of the graph. For that reason the __first iteration of the data will be used__ to create a regression model.
+  
+  The graph doesn't show an obvious trend. There are few sudden increases, and stability between those. There seems to be a great increase in 2019. The data **doesn't show seasonality** at the first glance. 
+  
+## 3.Regression Predictors
+
+  The data did not show seasonality in the graph but lets test the data to see if there is a seasonality that was not visible in its graph. 
+
+```{r echo=FALSE}
+acf(alcandtobdata[,alcandtob])
+#no seasonality
+
+```
+
+  Just like observed there is not any seasonality since the AutoCorrelation Function did not show any lag in the data. Now we will contione to pick and choose the predictors for the regression model. 
+  
+  It is logical to check the one on one correlations of the different data at hand. Below is a correlation matrix of all the types of data at hand. Investigating the correlations of alcohol and tobacco price index(alcandtob) will give which types  are correlated and can be used as predictors.
+
+```{r echo=FALSE}
+corr_data=cor(alcandtobdata[,-1])
+ggcorrplot(corr_data,hc.order = TRUE,
+           lab = TRUE, outline.col = "white",colors = c("mediumseagreen", "coral", "cornflowerblue"))
+
+```
+
+  After analyzing the correlation matrix above it can be said that *Consumer Price Index, Euro exchange rate, Revenue from alcohol and Current economic Situation are correlated* to alcoholic beverage and tobacco price index. *Household financial situation and The amount of money spent in places of drinking alcohol are somewhat correlated*. The number of transactions made places of drinking alcohol is not necessarily correlated. 
+  
+## 4.Regression Model
+  
+  Now let's check the ones that are correlated if they give out a fit regression model. 
+
+```{r echo=FALSE}
+alcandtobdata[,trend:=1:.N]
+
+fit_alc <- lm(Alcohol~Euro, data=alcandtobdata)
+alcandtobdata[,fitted_alc:=fitted(fit_alc)]
+
+fit <- lm(alcandtob~Euro+CPI+Casino1+Alcohol+Household+Economy , data = alcandtobdata)
+summary(fit)
+```
+
+  Euro exchange rate and CPI turns out to be extremely correlated. "Casino1", "Alcohol" and "Economy" are also correlated. "Household" is not correlated. p-value is low and R-squared value is 0.9485. This could be used as a regression model.
+  
+```{r echo=FALSE}
+checkresiduals(fit)
+```
+
+  This model seems to be fine; mean of the residuals seem to be 0, distribution resembles normal distribution. But this model has an excess predictor. "Household" which is current financial situation of the household is not correlated to the target data. Therefore this data is taken out of the model. New regression model can be seen below. 
+
+```{r echo=FALSE}
+fit <- lm(alcandtob~Euro+CPI+Casino1+Alcohol+Economy , data = alcandtobdata)
+summary(fit)
+```
+
+  In this model, there is a new data that shows significant correlation. p-value is low, R-squared is 0,9433. This model seems to be a good fit for our target data. 
+
+```{r echo=FALSE}
+checkresiduals(fit)
+
+alcandtobdata[,fitted:=fitted(fit)]
+alcandtobdata[,residuals:=residuals(fit)]
+```
+
+  Residual means looks close to 0. Distribution resembles normal distribution more in this iteration. This regression model can very well be used predicting the price index of alcoholic drinks and tobacco. 
+  
+## 5.Testing the Model
+  
+  Now we should test the model. Firstly we check the residuals of the regression model. We are looking for residuals averaging 0 and are scattered.
+```{r echo=FALSE}
+ggplot(alcandtobdata, aes(x=fitted, y=residuals))+geom_point()+labs(title = "Residual Test")
+```
+
+  Residuals look to be scattered equally around 0. There seems to be a pattern of decreasing residuals. This can be expected because the data have such sudden and large increases. Therefore this model can possibly be fit for the target data. 
+  
+  Next we compare the actual amount and the predicted amount of price index of alcohol and tobacco. We expect the values to be around the identity line. 
+
+```{r echo=FALSE}
+ggplot(alcandtobdata, aes(x=fitted, y=alcandtob))+geom_point()+
+  geom_abline(slope = 1, intercept = 0)+labs(title = "Actual vs Prediction Test")+ 
+  xlab('Predicted Values') +
+  ylab('Actual Values')
+```
+
+  Once again this test gives us a pattern of intersections. This is also explained by the  sudden increases in data and predictions catching up to the actual values in time. This test also approves the regression model.
+  
+## 6.Prediction
+
+  Now that there is a regression model that is fit  to our data we can predict the next months alcoholic beverages and tobacco price index. We will come up with a prediction for December of 2020 therefore we have to use the values of predictors at 2020 December. The data of Consumer Price Index, Euro exchange rate, Current economic Situation and The amount of money spent in places of drinking alcohol are all available in [EVDS](evds2.tcmb.gov.tr).
+
+```{r echo=FALSE}
+trend_info=(82)
+alcandtobdata=rbind(alcandtobdata,data.table(trend=as.factor(trend_info)), fill=T)
+alcandtobdata[82,Casino1:=24283]
+alcandtobdata[82,Euro:=9.38]
+alcandtobdata[82,CPI:=504.81]
+alcandtobdata[82,Date:=as.Date("2020-12-01")]
+alcandtobdata[82,Economy:=60.89]
+tail(alcandtobdata)
+```
+  
+  Column "fitted" in the table  below shows the prediction of the regression model in that month. Column "residuals" refers to the residual differences between the actual price index and predicted price index of alcohol and tobacco. 
+  
+  **The value of Revenue from alcohol consumption for December 2020 isn't available. Regression model for this value was also created and the December 2020 value was predicted by this model. This model isn't available on this page but it can be found in the code.** Column "fitted_alc" refers to the predicted revenue from alcohol consumption. Below is the last iteration of the table that includes all the necessery data in December 2020 for all predictor data types. 
+
+```{r echo=FALSE}
+alcandtobdata[is.na(fitted_alc)==T, fitted_alc:=predict(fit_alc,alcandtobdata[is.na(fitted_alc)==T])]
+alcandtobdata[82,Alcohol:=fitted_alc]
+tail(alcandtobdata)
+```
+
+  Now lets compare the actual values with the predicted ones on a graph and see how well the model works.
+
+```{r echo=FALSE, warning=FALSE}
+cols <- c("predicted" = "mediumseagreen", "actual" = "darkblue")
+ggplot()+
+  geom_line(data=alcandtobdata, aes(x=Date, y=fitted, color="predicted"))+
+  geom_line(data=alcandtobdata, aes(x=Date, y=alcandtob, color="actual"))+
+  xlab('Date')+
+  ylab('Alcohol & Tobacco')+
+  scale_color_manual(values = cols)
+```
+
+  Considering the sudden increases this model seems to be working fairly well. 
+  
+  Finally regression model is applied to the data at hand to predict the price index of alcoholic beverages and tobacco in December 2020. 
+  
+  
+  **And the predicted value of the regression model is:**
+
+```{r echo=FALSE, warning=FALSE}
+alcandtobdata[is.na(fitted)==T, fitted:=predict(fit,alcandtobdata[is.na(fitted)==T])]
+```
+```{r}
+alcandtobdata[82, fitted]
+```
+
+## 7.Conclusion
+
+  This study has came up with a prediction for the price index of alcoholic beverages by creating a regression model. Because the raise of the prices of alcohol and tobacco products are very sudden in Turkey, no regression model can perfectly predict the change. Model created in this study closely follows the actual data and is a good fit for predicting future price indexes. 
+  
+*  **CPI was significantly correlated** and was a predictor for the regression model. This result was expected and verifies the assumption made in Introduction. 
+*  **Euro exchange rate was also significantly correlated** and was used in the regression model. Both CPI and Euro being significant predictors shows that Euro exchange rate effects Alcohol and Tobacco prices much more than general Consumer Price Index. Euro exchange rate being a part of the model verifies our assumption of correlation.
+*  **Current Economic Situation turned out to be correlated** and a part of the regression model **unlike Current Financial Situation of Household**. It is possible that these two measures are closely intertwined and that's why only one of them is a predictor in the model. 
+* **The amount of money spent in places of drinking alcohol turned out to be correlated** and a part of the regression model **unlike the number of transactions made places of drinking alcohol**. It is possible that these two measures are closely intertwined and that's why only one of them is a predictor in the model. Revenue of alcoholic beverages  being a part of the regression model alongside the amount of money spent in places of drinking alcohol can point to a large market that is created by consumers buying these products directly.
+
+To add the tax on alcoholic beverages were increased in the new year. Raises on alcohol and tobacco products are very sudden as it would be very hard to change the prices of these products regularly would be hard and require spending money. The prediction will probably be at fault since there wasn't a big change in December and tax increase came in January.
+  
+### You can read the code from [here]((https://bu-ie-360.github.io/fall20-omeranilusta/files/Homework3.Rmd)).
