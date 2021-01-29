@@ -37,7 +37,7 @@ library(ggpubr)
 library(fpp)
 ```
 
-## 2.Manipulation and Visualization
+## 2.
 
   The data investigated in this study is the Price Index of Alcoholic Beverages and Tobacco in Turkey. Data in hand is monthly  estimates from March 2014 to November 2020. Aim of this study is coming up with a regression model and predict the next month's estimate which is December 2020. Now let's look at the measures in the data table below that will be used to create a regression model for the Price Index of alcohol and tobacco. 
 

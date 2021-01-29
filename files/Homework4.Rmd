@@ -1,0 +1,296 @@
+---
+# Stationarity of Turkish Electricity Consumption Data 
+
+Ömer Anıl Usta - IE360 - Fall20 - HW4
+09/01/2020
+
+## 1.Introduction
+
+This study focuses on Stationarity in Time Series. The data of the study is electricity consumption of Turkey. Using the data from January 1st of 2017 through January 8th of 2021 this study aims to forecast the electricity consumption for the 2 week period from **January 9th to January 23rd** of 2021. This prediction is supposed to be made using time series decomposition and other possible ways to achieve stationarity. After achieving stationarity through decomposition or elimination of the outliers a model is derived. 
+
+ARIMA models are in short: auto regression including moving average. These models are used in stationary data. Using these models predictions of the electricity consumption for 14 day period will be made. 
+
+## 2.Data Analysis
+
+The data is taken from [EPİAŞ](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml) in hourly form. Later the data is turned into daily form using the mean of hourly footage of every day. This way it will be easier to handle the data
+
+```{r echo=FALSE , include=FALSE}
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(ggcorrplot)
+library(GGally)
+library(ggpubr)
+library(urca)
+require(forecast)
+electric_data <-data.table(read.csv("C:/Users/lenovo/Desktop/hour.csv"))
+
+setnames(electric_data, "Tarih", "Date")
+setnames(electric_data, "Saat", "Time")
+setnames(electric_data, "Tüketim.Miktarı..MWh.", "Consumption")
+
+electric_data[,Date:=as.Date(Date,"%d.%m.%Y")]
+electric_data[,Consumption:=as.numeric(gsub(",", "", Consumption))]
+electric_data=electric_data[,list(daily_mean=mean(Consumption,na.rm=T)),by=list(Date)]
+```
+```{r echo=FALSE}
+head(electric_data)
+tail(electric_data)
+```
+
+As you can see the data covers daily electricity consumption from the beginning of 2017 to January 8th of 2021. We will try to come up with a model to predict the consumption for the next 2 weeks. 
+
+Now lets investigate closer this consumption data via te graph below. This graph showcases the daily mean of electricity usage per hour. 
+
+```{r echo=FALSE}
+ggplot(electric_data)+geom_line(aes(x=Date, y=daily_mean), colour="cornflowerblue")+
+  labs(title = "Daily Mean of Hourly Electricity Usage in Turkey", 
+       x = "Time",
+       y = "Electricity Consumption(1000*MWh)")
+```
+
+We can easily detect the seasonality of the data by simply looking at the graph. The electricity usage decreases in fall and spring and increases in winter and summer. We will further investigate for seasonality. It can also said that at the first half of 2020 there were an unexpected amount of drop in electricity consumption. This can easily be associated to Covid-19 since those months were the ones that coronavirus was in full effect on the work life. There are also some outliers with an exceptional low rate of consumpsion. It is safe to assume these dates are religios holidays.
+
+## 3.Time Series Decomposition
+
+From the graph above it is seen that there is a yearly seasonality. For further investigating seasonality in the data let us use the auto-correlation function to look for seasonalities in smaller scales, since the yealy seasonality is large for the daily data.
+
+```{r echo=FALSE}
+acf(electric_data$daily_mean)
+```
+
+It is clear that there is a weekly seasonality. There is a definite **lag every 7 days**. For further proof of this weekly sesonality partial auto-correlation function of the data is given below. 
+
+```{r echo=FALSE}
+pacf(electric_data$daily_mean)
+```
+
+Once again the 7 day lag is achieved through the partial auto-correlation analysis. 
+
+Next the electricity consumption data is decomposed into its constituents. Trend, Seasonality and the random(white noise) of the data is seen below in the decomposition graph. Trend is the main course the  values follow through the data. Seasonality is the consecutive changes in periods following each other. Random change is the unexpected change in the value. 
+
+```{r echo=FALSE}
+electric_ts = ts(na.omit(electric_data$daily_mean), frequency=7) 
+elec_decomp = decompose(electric_ts)
+#elec_decomp
+plot(elec_decomp) 
+```
+
+When working on stationarity the random changes is the focus. Seasonality and trend doesn't break stationarity they aren't used while deriving a model for forecasting. **Trend and Seasonality terms are substracted to derive the Random term**
+
+Now, to closer investigate the random term of the data  analyze the graph below. 
+
+```{r echo=FALSE}
+random<-elec_decomp$random
+ts.plot(random)
+```
+
+The random values are scattered around 0. Which supports the randomness. The irregular consumptions on religious holiday dates are also visible in the graph. 
+
+## 4.Stationarity
+
+Kwiatkowski–Phillips–Schmidt–Shin test is conducted to the random term of the data to test the null hypothesis. The series is stationary if the test statistic is under the critical values.  
+
+```{r echo=FALSE}
+random%>% ur.kpss() %>% summary()
+```
+
+0.0031 value of the test statistic is lower than the critical values therefore it can be said that **this data is stationary**. In short the null hypothesis is accepted. Because the stationarity is achieved no further manupilotion on the data is necessary.
+
+Next the auto-correlation analysis of the random term is conducted. 
+
+```{r echo=FALSE}
+acf(random, na.action = na.pass)
+```
+
+The lag-1 looks to be correlated and seems to be useful while trying to come up with a autoregression model. 
+
+Next the partial auto-correlation analysis is conducted. 
+
+```{r echo=FALSE}
+pacf(random, na.action = na.pass)
+```
+
+Once again lag-1 looks significant. This time however lag-2 also looks to be correlated. 
+
+Because the lag-1's significantness in the correlation analyses, first idea for an arima model is (1,0,0) or (0,0,1). Arima models are used to create models including auto-regression and moving average for prediction. 
+
+First create the model for (1,0,0), analyze and compare.
+
+```{r echo=FALSE}
+model<-arima(random, order=c(1,0,0))
+print(model)
+```
+
+AIC value is 3501.15 which will be used to compare to other models. Lower the AIC value more optimal the model is. 
+
+Next the arima model (0,0,1) is conducted to analyze and compare. 
+
+```{r echo=FALSE}
+model<-arima(random, order=c(0,0,1))
+print(model)
+```
+
+AIC value is 3372.85 which is more ideal than the previous model. Therefore this arima model (0,0,1) goes forward. 
+
+Finally auto.arima function is used to come up with another arima model. This fuction gives a possibly ideal model for the data given. 
+
+```{r echo=FALSE}
+model=auto.arima(random,seasonal=F,trace=T)
+```
+
+ARIMA(0,0,2) is brought up by the auto.arima function which can be more fitting model for our data. New model is analyzed and compared.
+
+```{r echo=FALSE}
+print(model)
+```
+
+AIC value is 3362.78, BIC value equals 3378.63. This AIC value is lower than both of the previous values. Therefore **ARIMA(0,0,2) model is picked for forecasting**. 
+
+## 6.Forecasting
+```{r echo=FALSE}
+model_fitted<-random - residuals(model)
+model_fitted_transformed<- model_fitted + elec_decomp$seasonal + elec_decomp$trend
+```
+
+Before forecasting using the arima model, let us compare the actual random term with the models prediction. 
+
+```{r echo=FALSE}
+plot(random, xlab = "Year", ylab = "1000*MWh",main="Electricity Consumption-Random Term")
+points(model_fitted, type = "l", col = 11, lty = 2)
+```
+
+The model seems to be working fine. It does cover and follow the actual data. Therefore it can be said that the model is fitting to the electricity consumption data. 
+
+Next, compare the measured consumption values with the predicted values. Predicted consumption values are calculated by adding the Trend and Seasonality terms of the data to the model. This operation is conducted because when trying to reach stationarity trend and seasonality terms were substracted from the data. 
+
+```{r echo=FALSE}
+plot(electric_ts, xlab = "Year", ylab = "1000*MWh",main="Electricity Consumption")
+points(model_fitted_transformed, type = "l", col = 11, lty = 2)
+```
+
+As you can see the model also follows the consumption data and graph. Which once again supports the fitness of the model. 
+
+After the derivation of the model and decide on it's fitness forecast for the following 2 weeks is made. *Because the trend values on these missing dates aren't available, last measured trend value is used while forecasting.* Seasonality values are also used in the forecasting process. 
+
+```{r echo=FALSE}
+model_forecast <- predict(model, n.ahead = 14)$pred
+last_trend_value <-as.numeric(rep(tail(elec_decomp$trend[!is.na(elec_decomp$trend)],1),14))
+seasonality=as.numeric(tail(elec_decomp$seasonal,14))
+model_forecast=model_forecast+last_trend_value+seasonality
+model_forecast
+model_forecast <- ts(model_forecast)
+```
+
+As seen 14 values for 14 days are predicted. From January 9th to January 23rd the predictred values are *34.20003, 30.89050, 34.92920, 35.82925, 36.07451, 36.17121, 35.83293, 34.20003, 30.89050, 34.92920, 35.82925, 36.07451, 36.17121 and 35.83293* consecutively. 
+
+## 7.Results
+
+The predicted dates are since available which means the forecast should be checked. 
+
+First let us look at at a graph for comparison. 
+
+```{r echo=FALSE}
+next_week <-data.table(read.csv("C:/Users/lenovo/Desktop/week.csv"))
+colnames(next_week) = c("Date", "Time", "Consumption")
+
+next_week[,Date:=as.Date(Date,"%d.%m.%Y")]
+next_week[,Consumption:=as.numeric(gsub(",", "", Consumption))]
+next_week=next_week[,list(daily_mean=mean(Consumption,na.rm=T)),by=list(Date)]
+
+next_week[1, forecast:=model_forecast[1]]
+next_week[2, forecast:=model_forecast[2]]
+next_week[3, forecast:=model_forecast[3]]
+next_week[4, forecast:=model_forecast[4]]
+next_week[5, forecast:=model_forecast[5]]
+next_week[6, forecast:=model_forecast[6]]
+next_week[7, forecast:=model_forecast[7]]
+next_week[8, forecast:=model_forecast[8]]
+next_week[9, forecast:=model_forecast[9]]
+next_week[10, forecast:=model_forecast[10]]
+next_week[11, forecast:=model_forecast[11]]
+next_week[12, forecast:=model_forecast[12]]
+next_week[13, forecast:=model_forecast[13]]
+next_week[14, forecast:=model_forecast[14]]
+
+ggplot(next_week)+geom_line(aes(x=Date, y=forecast,colour="cornflowerblue"))+geom_line(aes(x=Date, y=daily_mean,colour="blue")) +
+  labs(title = "Consumption Data Compared to Models Forecast",
+       x = "Date ", y = "1000 MWh") +
+  scale_color_discrete(name = "Data", labels = c("forecast","consumption"))
+```
+
+The predictions seem to be higher that the actual measurements. It is hard to say what couses this problem. 
+
+Now further check the predictions in the accuracy test below. 
+
+```{r echo=FALSE}
+accuracy <- function(actual, forecasted){
+  n=length(actual)
+  error = actual-forecasted
+  mean=mean(actual)
+  sd=sd(actual)
+  bias = sum(error)/sum(actual)
+  mape = sum(abs(error/actual))/n
+  mad = sum(abs(error))/n
+  wmape = mad/mean
+  df = data.frame(n,mean,sd,bias,mape,mad,wmape)
+  return(df)
+}
+
+accuracy(next_week$daily_mean, next_week$forecast)
+```
+
+Lower wmape value is the mark of a better forecasting model. 
+
+Of course because there isn't anything to compare, these values doesn't mean much. Therefore this result is compared to the ARIMA model (0,0,1)'s accuracy test.
+
+```{r echo=FALSE}
+model<-arima(random, order=c(0,0,1))
+model_fitted<-random - residuals(model)
+model_fitted_transformed<- model_fitted + elec_decomp$seasonal + elec_decomp$trend
+model_forecast <- predict(model, n.ahead = 14)$pred
+last_trend_value <-as.numeric(rep(tail(elec_decomp$trend[!is.na(elec_decomp$trend)],1),14))
+seasonality=as.numeric(tail(elec_decomp$seasonal,14))
+model_forecast=model_forecast+last_trend_value+seasonality
+
+next_week <-data.table(read.csv("C:/Users/lenovo/Desktop/week.csv"))
+colnames(next_week) = c("Date", "Time", "Consumption")
+
+next_week[,Date:=as.Date(Date,"%d.%m.%Y")]
+next_week[,Consumption:=as.numeric(gsub(",", "", Consumption))]
+next_week=next_week[,list(daily_mean=mean(Consumption,na.rm=T)),by=list(Date)]
+
+next_week[1, forecast:=model_forecast[1]]
+next_week[2, forecast:=model_forecast[2]]
+next_week[3, forecast:=model_forecast[3]]
+next_week[4, forecast:=model_forecast[4]]
+next_week[5, forecast:=model_forecast[5]]
+next_week[6, forecast:=model_forecast[6]]
+next_week[7, forecast:=model_forecast[7]]
+next_week[8, forecast:=model_forecast[8]]
+next_week[9, forecast:=model_forecast[9]]
+next_week[10, forecast:=model_forecast[10]]
+next_week[11, forecast:=model_forecast[11]]
+next_week[12, forecast:=model_forecast[12]]
+next_week[13, forecast:=model_forecast[13]]
+next_week[14, forecast:=model_forecast[14]]
+
+accuracy(next_week$daily_mean, next_week$forecast)
+```
+wmape value of our model is larger than of (0,0,1) model. This is unexpected since when seeking for a fitting model (0,0,2), looked to be more ideal than (0,0,1). 
+
+This result tells, *choosing the arima model based on lower AIC is not a perfect route to the ideal prediction*. 
+
+## 8.Conclusion
+
+In this study the data at hand which is electricity consumption in Turkey, is not stationary at first. First goal was to manupilate the data in order to achieve stationarity. Time series decomposition was used. The trend and seasonality terms of the data were substracted. This substraction was due to the choice of using additive decomposition insted of multiplicative decomposition. After this decomposition the Random term of the data was stationary. At this point the use of ARIMA models was necessary. Since ARIMA models are used on stationary data. 
+
+Different models were compared and **(0,0,2) model was chosen**. This model was supposedly more ideal because it had lower AIC  value. Using this model the prediction was compared to the measured values. Finally, the forecasting was done for the wanted period of time that was 9-23 January 2021. Later, these predictions were compared to the since measured values. Accuracy test was conducted on the model. 
+
+At this point unexpected results came about. After comparing the accuracy test with the previously compared **(0,0,1)** model, **(0,0,2)** model which was supposedly more fit didn't have the lower wmape value like expected. **(0,0,1) model is actually more accurate in it's predictions**. This overlaps with the lower AIC value **(0,0,2)** model had when trying to come up with the model. 
+
+### Appendices
+
+##### You can read the code from [here]((https://bu-ie-360.github.io/fall20-omeranilusta/files/Homework4.Rmd)).
