@@ -48,7 +48,7 @@ Now lets investigate closer this consumption data via te graph below. This graph
 ggplot(electric_data)+geom_line(aes(x=Date, y=daily_mean), colour="cornflowerblue")+
   labs(title = "Daily Mean of Hourly Electricity Usage in Turkey", 
        x = "Time",
-       y = "Electricity Consumption(1000*MWh)")
+       y = "Electricity Consumption(1000*MWh)")+theme_minimal()
 ```
 
 We can easily detect the seasonality of the data by simply looking at the graph. The electricity usage decreases in fall and spring and increases in winter and summer. We will further investigate for seasonality. It can also said that at the first half of 2020 there were an unexpected amount of drop in electricity consumption. This can easily be associated to Covid-19 since those months were the ones that coronavirus was in full effect on the work life. There are also some outliers with an exceptional low rate of consumpsion. It is safe to assume these dates are religios holidays.
@@ -218,7 +218,7 @@ next_week[14, forecast:=model_forecast[14]]
 ggplot(next_week)+geom_line(aes(x=Date, y=forecast,colour="cornflowerblue"))+geom_line(aes(x=Date, y=daily_mean,colour="blue")) +
   labs(title = "Consumption Data Compared to Models Forecast",
        x = "Date ", y = "1000 MWh") +
-  scale_color_discrete(name = "Data", labels = c("forecast","consumption"))
+  scale_color_discrete(name = "Data", labels = c("forecast","consumption"))+theme_minimal()
 ```
 
 The predictions seem to be higher that the actual measurements. It is hard to say what couses this problem. 
