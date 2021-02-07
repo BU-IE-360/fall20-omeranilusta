@@ -1,0 +1,195 @@
+---
+---
+
+I would like to tell that I couldn't do this study with the asked method. I was unable to create loops to renew the data and predict two day prior. I first tried to go forward with the data in hourly form. But this was much harder for me. Then I tried to create model for daily data. I was unsuccessful once again. I kept some of the code that i tried to create. They are not visible in the html format. 
+
+# IE 360 FINAL
+## Forecasting Solar Production Data With Time Series Analysis and Regression
+
+Ömer Anıl Usta - IE360 - Fall20 - Final
+07/02/2020
+
+## 1.Introduction
+
+This study takes data from Solar Power Production from CINGILLI GES solar power plant. The data is in hourly form and includes measures from October 10th 2019 until February 2nd 2021. The goal is to come up with models using time series analysis and regression for forecasting solar power production for the period December 1st 2020 to January 31st 2021. The predictions are to be made two day prior, which means the model is suppose to predict productions for two days later. 
+
+Hourly measures of temperature, downward shortwave radiation flux, cloud cover percentage are also included in the data. Measurements of these three data types from 4 different locations are given. These measures will be used to create regression models. 
+
+## 2.Analysis
+
+The data is taken from [EPİAŞ](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml) in hourly form. Data is turned into daily total form by summing hourly data for every day. This way it will be easier to analyze the data.
+
+```{r warning=FALSE, include=FALSE}
+library(data.table)
+library(lubridate)
+library(ggplot2)
+library(readxl)
+library(dplyr)
+library(ggcorrplot)
+library(GGally)
+library(ggpubr)
+library(urca)
+require(forecast)
+prod <-data.table(read.csv("C:/Users/lenovo/Desktop/production.csv"))
+
+prod[,Date:=as.Date(Date,"%Y-%m-%d")]
+prod[,Production:=as.numeric(gsub(",", "", Production))]
+prod=prod[,list(daily_total=sum(Production,na.rm=T)),by=list(Date)]
+```
+```{r}
+ggplot(prod)+geom_line(aes(x=Date, y=daily_total), colour="cornflowerblue")+
+  labs(title = "Daily Mean of Hourly Electricity Usage in Turkey in 2017-2021", 
+       x = "Time",
+       y = "Electricity Consumption")
+```
+
+It is clearly seen that there is seasonality. Solar production drops in winter time and rises in summer. 
+
+The seasonality is one reason that removes the stationarity. The mean of the data doesn't look stationary. The variance on the other hand looks more consistent. In summer-fall period the variance seems to be lover that usual. 
+
+Autocorrelation function is plotted to analyse lags in the daily data. 
+
+```{r}
+prod <-data.table(read.csv("C:/Users/lenovo/Desktop/production.csv"))
+
+prod[,Date:=as.Date(Date,"%Y-%m-%d")]
+acf(prod$Production, lag.max = 48)
+```
+
+Autocorrelation function plot shows lag at 24. Which means a daily lag. This is expected. 
+
+## 2.A.Time Series Analysis
+
+Firstly time series analysis for the data is asked. The data will be handled in hourly form. To apply time series analysis to the data it needs to be stationary. To test the stationarity KPSS test is conducted below. 
+
+```{r}
+prod$Production%>% ur.kpss() %>% summary()
+```
+
+As you can see the test statistic value is much higher than critical values. Hence the stationarity isn't achieved. 
+
+From the autocorrelation function lag 24 was correlated. Therefore when turning the data from data table from into time series from frequency 24 is used. 
+
+Time Series decomposition for solar production is conducted to achieve stationarity.
+```{r include=FALSE}
+prod <-data.table(read.csv("C:/Users/lenovo/Desktop/production.csv"))
+prod[1:10057]
+```
+
+```{r}
+prod_ts = ts(na.omit(prod$Production), frequency=24)
+prod_decomp = decompose(prod_ts)
+plot(prod_decomp)
+```
+
+Seasonality and trend terms of the data are substracted from the values to calculate the random term. Random term is to be used while coming up with a model if it's stationary. First the plot of random term is analyzed. 
+
+```{r}
+random<-prod_decomp$random
+ts.plot(random)
+```
+
+Random values look to be scatterede around 0. Then KPSS test is conducted to random term. 
+
+```{r}
+random%>% ur.kpss() %>% summary()
+```
+
+Test statistic values is very small. Which says the random term is stationary. Therefore the random term can be used to create an ARIMA model. auto.arima function is used to find the most fitting ARIMA model. 
+
+```{r}
+fitted=auto.arima(random,seasonal=F,trace=T)
+```
+
+ARIMA model (5,0,0) is returned as the most fitting model for predicting the random term. 
+
+```{r}
+model<-arima(random, order=c(5,0,0))
+print(model)
+```
+
+Forecast is made using this model.
+
+```{r warning=FALSE, include=FALSE}
+model_forecast <- predict(model, n.ahead = 1511)$pred
+last_trend_value <-as.numeric(rep(tail(prod_decomp$trend[!is.na(prod_decomp$trend)],1),1512))
+seasonality=as.numeric(tail(prod_decomp$seasonal,1511))
+model_forecast=model_forecast+prod_decomp$trend[10057]+seasonality
+model_forecast <- as.data.table(model_forecast)
+```
+```{r }
+prod <-data.table(read.csv("C:/Users/lenovo/Desktop/production.csv"))
+prod[,Date:=as.Date(Date,"%Y-%m-%d")]
+prod<-prod[10058:11568,]
+prod<-prod[,1:3]
+
+predicted<-as.data.table(cbind(prod,model_forecast))
+```
+
+## 2.B.Regression
+
+The additional measures are used to create a different model. Below you can see the regression model for the data below. 
+
+```{r }
+prod <-data.table(read.csv("C:/Users/lenovo/Desktop/production.csv"))
+prod[,Date:=as.Date(Date,"%Y-%m-%d")]
+prod[,trend:=1:.N]
+
+fit <- lm(prod$Production~0+as.factor(Hour)+as.factor(year(Date))
+          +as.factor(month(Date))+CLOUD_LOW_LAYER_37.75_34.25
+          +CLOUD_LOW_LAYER_37.75_34.5+CLOUD_LOW_LAYER_38_34.25
+          +CLOUD_LOW_LAYER_38_34.5+DSWRF_37.75_34.25
+          +DSWRF_37.75_34.5+DSWRF_38_34.25+DSWRF_38_34.5
+          +TEMP_37.75_34.25+TEMP_37.75_34.5+TEMP_38_34.25
+          + TEMP_38_34.5 ,
+          data = prod)
+summary(fit)
+```
+
+Most of the additional data is significant in the model. And the model looks to be fit. p-value is low and R-squared is adequate.
+
+This model is used to make another prediction.
+
+```{r}
+prod[,fitted:=fitted(fit)]
+predicted<-as.data.table(cbind(predicted,prod$fitted[10058:11568]))
+```
+
+## 3.Comparison
+
+Finally the ARIMA and regression models are compared. Below is the accuracy test for the former model. 
+
+```{r}
+accuracy <- function(actual, forecasted){
+  n=length(actual)
+  error = actual-forecasted
+  mean=mean(actual)
+  sd=sd(actual)
+  bias = sum(error)/sum(actual)
+  mape = sum(abs(error/actual))/n
+  mad = sum(abs(error))/n
+  wmape = mad/mean
+  df = data.frame(n,mean,sd,bias,mape,mad,wmape)
+  return(df)
+}
+
+accuracy(predicted$Production, predicted$V2)
+```
+
+The the accuracy test for the regression model. 
+
+```{r}
+accuracy(predicted$Production, predicted$x)
+```
+
+wmape value of the ARIMA(5,0,0) model is lower than the regression model. Therefore the model is a better fit. 
+
+And lastly the forecast for two different models and the measured values are drawn in the graph below. 
+
+## 4.Conclusion
+
+In this study two different models are created to predict solar power production. Time series analysis and regression methods are used to create the forecasting models. When compared ARIMA(5,0,0) model turned out to be a better fit. 
+
+### Appendices
+
+##### You can read the code from [here]((https://bu-ie-360.github.io/fall20-omeranilusta/files/Final.Rmd)).
