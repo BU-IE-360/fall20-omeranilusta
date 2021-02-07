@@ -1,7 +1,7 @@
 ---
 ---
 
-I would like to tell that I couldn't do this study with the asked method. I was unable to create loops to renew the data and predict two day prior. I first tried to go forward with the data in hourly form. But this was much harder for me. Then I tried to create model for daily data. I was unsuccessful once again. I kept some of the code that i tried to create. They are not visible in the html format. 
+I would like to tell that I couldn't do this study with the asked method. I was unable to create loops to renew the data and predict two day prior. I first tried to go forward with the data in hourly form. But this was much harder. Then I tried to create model for daily data. I was unsuccessful once again.  At last minute effort I made predictions for the December 2020- January 2021 period. 
 
 # IE 360 FINAL
 ## Forecasting Solar Production Data With Time Series Analysis and Regression
